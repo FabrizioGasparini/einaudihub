@@ -1,0 +1,12 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^Add-Content -Path \"e:\\\\Progetti\\\\einaudihub\\\\web\\\\prisma\\\\seed\\.ts\" -Value \"\nimport \\{ PrismaClient \\} from '@prisma/client'\nconst prisma = new PrismaClient\\(\\)\n\nasync function main\\(\\) \\{\n  const categories = \\['Generale', 'Scuola', 'Eventi', 'Domande', 'Oggetti Smarriti', 'Progetti'\\];\n  for \\(const name of categories\\) \\{\n    const slug = name\\.toLowerCase\\(\\)\\.replace\\(/ /g, '-'\\);\n    await prisma\\.category\\.upsert\\(\\{\n      where: \\{ slug \\},\n      update: \\{\\},\n      create: \\{ name, slug \\},\n    \\}\\)\n  \\}\n\\}\nmain\\(\\)\n  \\.then\\(async \\(\\) => \\{\n    await prisma\\.\\$disconnect\\(\\)\n  \\}\\)\n  \\.catch\\(async \\(e\\) => \\{\n    console\\.error\\(e\\)\n    await prisma\\.\\$disconnect\\(\\)\n    process\\.exit\\(1\\)\n  \\}\\)\n\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^npm install zod$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
