@@ -1,0 +1,101 @@
+export type Role = "STUDENT" | "CLASS_REP" | "SCHOOL_REP" | "MODERATOR" | "ADMIN";
+
+export type Permission =
+  | "VIEW_PUBLIC_CONTENT"
+  | "CREATE_STUDENT_POST"
+  | "COMMENT"
+  | "JOIN_EVENTS"
+  | "VOTE_POLLS"
+  // rappresentante di classe
+  | "CREATE_CLASS_ANNOUNCEMENT"
+  | "CREATE_CLASS_POLL"
+  | "MODERATE_CLASS_CONTENT"
+  // rappresentante di istituto
+  | "CREATE_SCHOOL_ANNOUNCEMENT"
+  | "CREATE_SCHOOL_EVENT"
+  | "CREATE_GLOBAL_POLL"
+  | "MODERATE_PUBLIC_BOARD"
+  | "FEATURE_CONTENT"
+  // moderatore
+  | "MODERATE_PLATFORM"
+  | "HANDLE_REPORTS"
+  | "APPLY_SOFT_SANCTIONS"
+  // admin
+  | "MANAGE_USERS"
+  | "MANAGE_ROLES"
+  | "MANAGE_CLASSES"
+  | "MANAGE_GLOBAL_CONTENT"
+  | "MANAGE_SYSTEM_SETTINGS";
+
+const baseRolePermissions: Record<Role, Permission[]> = {
+  STUDENT: [
+    "VIEW_PUBLIC_CONTENT",
+    "CREATE_STUDENT_POST",
+    "COMMENT",
+    "JOIN_EVENTS",
+    "VOTE_POLLS",
+  ],
+  CLASS_REP: [
+    "VIEW_PUBLIC_CONTENT",
+    "CREATE_STUDENT_POST",
+    "COMMENT",
+    "JOIN_EVENTS",
+    "VOTE_POLLS",
+    "CREATE_CLASS_ANNOUNCEMENT",
+    "CREATE_CLASS_POLL",
+    "MODERATE_CLASS_CONTENT",
+  ],
+  SCHOOL_REP: [
+    "VIEW_PUBLIC_CONTENT",
+    "CREATE_STUDENT_POST",
+    "COMMENT",
+    "JOIN_EVENTS",
+    "VOTE_POLLS",
+    "CREATE_SCHOOL_ANNOUNCEMENT",
+    "CREATE_SCHOOL_EVENT",
+    "CREATE_GLOBAL_POLL",
+    "MODERATE_PUBLIC_BOARD",
+    "FEATURE_CONTENT",
+  ],
+  MODERATOR: [
+    "VIEW_PUBLIC_CONTENT",
+    "CREATE_STUDENT_POST",
+    "COMMENT",
+    "JOIN_EVENTS",
+    "VOTE_POLLS",
+    "MODERATE_PLATFORM",
+    "HANDLE_REPORTS",
+    "APPLY_SOFT_SANCTIONS",
+  ],
+  ADMIN: [
+    "VIEW_PUBLIC_CONTENT",
+    "CREATE_STUDENT_POST",
+    "COMMENT",
+    "JOIN_EVENTS",
+    "VOTE_POLLS",
+    "MODERATE_PLATFORM",
+    "HANDLE_REPORTS",
+    "APPLY_SOFT_SANCTIONS",
+    "MANAGE_USERS",
+    "MANAGE_ROLES",
+    "MANAGE_CLASSES",
+    "MANAGE_GLOBAL_CONTENT",
+    "MANAGE_SYSTEM_SETTINGS",
+    "CREATE_SCHOOL_ANNOUNCEMENT",
+    "CREATE_SCHOOL_EVENT",
+    "CREATE_GLOBAL_POLL",
+    "MODERATE_PUBLIC_BOARD",
+    "FEATURE_CONTENT",
+  ],
+};
+
+export function getPermissionsForRoles(roles: Role[]): Set<Permission> {
+  const set = new Set<Permission>();
+  for (const role of roles) {
+    for (const perm of baseRolePermissions[role]) {
+      set.add(perm);
+    }
+  }
+  return set;
+}
+

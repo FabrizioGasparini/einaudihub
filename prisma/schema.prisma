@@ -1,0 +1,494 @@
+generator client {
+  provider   = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+/**
+ * RUOLI
+ *
+ * STUDENT      -> ruolo base
+ * CLASS_REP    -> rappresentante di classe
+ * SCHOOL_REP   -> rappresentante d'istituto
+ * MODERATOR    -> moderatore tecnico
+ * ADMIN        -> amministratore di sistema
+ */
+enum RoleName {
+  STUDENT
+  CLASS_REP
+  SCHOOL_REP
+  MODERATOR
+  ADMIN
+}
+
+/**
+ * Stato partecipazione eventi
+ */
+enum ParticipationStatus {
+  GOING
+  NOT_GOING
+  INTERESTED
+}
+
+/**
+ * Stato account utente (per eventuali blocchi/sospensioni)
+ */
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+/**
+ * CLASSI (3A INF, 4B LING, ecc.)
+ */
+model Class {
+  id        String  @id @default(cuid())
+  year      Int
+  section   String  // es. "3A INF"
+
+  students  User[]
+  userRoles UserRole[] // ruoli con scope di classe
+
+  events        Event[]
+  posts         Post[]
+  announcements Announcement[]
+  polls         Poll[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([year, section])
+}
+
+/**
+ * UTENTI
+ * - email scolastica unica
+ * - relazione opzionale a Class
+ * - ruoli multipli tramite UserRole
+ */
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  name      String
+  avatarUrl String?
+  status    UserStatus @default(ACTIVE)
+
+  classId   String?
+  class     Class?     @relation(fields: [classId], references: [id])
+
+  // interessi, tag, ecc. (per semplicità: JSON o testo)
+  interests String?
+
+  // ruoli assegnati
+  roles     UserRole[]
+
+  // contenuti creati
+  posts          Post[]
+  comments       Comment[]
+  events         Event[]           @relation("EventCreator")
+  participations EventParticipation[]
+  polls          Poll[]            @relation("PollCreator")
+  pollVotes      PollVote[]
+  reports        Report[]          @relation("Reporter")
+  handledReports Report[]          @relation("ReportHandler")
+  hiddenPosts    Post[]            @relation("PostHiddenBy")
+  hiddenComments Comment[]         @relation("CommentHiddenBy")
+  announcements  Announcement[]
+  postLikes      PostLike[]
+
+  // Chat system
+  sentMessages      Message[]     @relation("MessageSender")
+  conversations     ConversationParticipant[]
+  
+  auditLogs         AuditLog[]
+
+  accounts      Account[]
+  sessions      Session[]
+  emailVerified DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([classId])
+  @@index([status])
+}
+
+/**
+ * RUOLI UTENTE CON SCOPE
+ *
+ * - role: tipo di ruolo
+ * - classId: opzionale, per scope di classe (CLASS_REP, eventualmente altri)
+ * - schoolWide: true se il ruolo vale per tutto l'istituto
+ */
+model UserRole {
+  id        String   @id @default(cuid())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  role      RoleName
+
+  classId   String?
+  class     Class?   @relation(fields: [classId], references: [id])
+
+  schoolWide Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, role])
+  @@index([classId])
+}
+
+/**
+ * EVENTI
+ * - possono essere di istituto (classId null) o di classe (classId specifico)
+ */
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  date        DateTime
+  location    String?
+
+  createdById String
+  createdBy   User     @relation("EventCreator", fields: [createdById], references: [id])
+
+  // visibilità / scope
+  classId   String?
+  class     Class?   @relation(fields: [classId], references: [id])
+
+  participations EventParticipation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@index([classId])
+}
+
+/**
+ * PARTECIPAZIONE AGLI EVENTI
+ */
+model EventParticipation {
+  id        String   @id @default(cuid())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id])
+
+  status    ParticipationStatus
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, eventId])
+  @@index([eventId])
+}
+
+/**
+ * CATEGORIE PER LA BACHECA STUDENTI
+ * Es.: "Generale", "Sport", "Musica", "Progetti", ecc.
+ */
+model Category {
+  id    String @id @default(cuid())
+  name  String @unique
+  slug  String @unique
+
+  posts Post[]
+
+  createdAt DateTime @default(now())
+}
+
+/**
+ * POST DELLA BACHECA STUDENTI
+ * - possono essere globali (classId null) o di classe
+ * - moderazione soft tramite isHidden / hiddenById
+ */
+model Post {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+
+  classId     String?
+  class       Class?    @relation(fields: [classId], references: [id])
+
+  isHidden    Boolean   @default(false)
+  hiddenById  String?
+  hiddenBy    User?     @relation("PostHiddenBy", fields: [hiddenById], references: [id])
+
+  comments    Comment[]
+  reports     Report[]  @relation("PostReports")
+  likes       PostLike[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([classId])
+  @@index([isHidden])
+  @@index([authorId])
+}
+
+/**
+ * COMMENTI AI POST
+ * - anche qui moderazione soft
+ */
+model Comment {
+  id        String   @id @default(cuid())
+
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id])
+
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+
+  content   String
+
+  isHidden  Boolean  @default(false)
+  hiddenById String?
+  hiddenBy   User?   @relation("CommentHiddenBy", fields: [hiddenById], references: [id])
+
+  reports   Report[] @relation("CommentReports")
+
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+  @@index([authorId])
+}
+
+/**
+ * ANNUNCI (AVVISI)
+ * - di classe (classId non null, isOfficial false)
+ * - ufficiali di istituto (classId null, isOfficial true, tipicamente SCHOOL_REP / ADMIN)
+ */
+model Announcement {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+
+  classId     String?
+  class       Class?   @relation(fields: [classId], references: [id])
+
+  // true = annuncio ufficiale di istituto
+  isOfficial  Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+
+  @@index([classId, isOfficial])
+  @@index([createdById])
+}
+
+/**
+ * SONDAGGI
+ * - di classe (classId non null, schoolWide = false)
+ * - di istituto (classId null, schoolWide = true)
+ */
+model Poll {
+  id          String   @id @default(cuid())
+  question    String
+
+  createdById String
+  createdBy   User     @relation("PollCreator", fields: [createdById], references: [id])
+
+  classId     String?
+  class       Class?   @relation(fields: [classId], references: [id])
+
+  schoolWide  Boolean  @default(false)
+
+  options     PollOption[]
+  votes       PollVote[]
+
+  endsAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([classId])
+  @@index([schoolWide])
+  @@index([endsAt])
+}
+
+/**
+ * OPZIONI DI UN SONDAGGIO
+ */
+model PollOption {
+  id      String @id @default(cuid())
+
+  pollId  String
+  poll    Poll   @relation(fields: [pollId], references: [id], onDelete: Cascade)
+
+  text    String
+
+  votes   PollVote[]
+
+  createdAt DateTime @default(now())
+
+  @@index([pollId])
+}
+
+/**
+ * VOTI AI SONDAGGI
+ * - un solo voto per utente per sondaggio
+ */
+model PollVote {
+  id         String @id @default(cuid())
+
+  pollId     String
+  poll       Poll   @relation(fields: [pollId], references: [id], onDelete: Cascade)
+
+  optionId   String
+  option     PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  userId     String
+  user       User   @relation(fields: [userId], references: [id])
+
+  createdAt  DateTime @default(now())
+
+  @@unique([pollId, userId])
+  @@index([optionId])
+  @@index([userId])
+}
+
+/**
+ * SEGNALAZIONI (REPORT) PER MODERAZIONE
+ * - possono riferirsi a un post o a un commento
+ */
+model Report {
+  id          String   @id @default(cuid())
+
+  reporterId  String
+  reporter    User     @relation("Reporter", fields: [reporterId], references: [id])
+
+  postId      String?
+  post        Post?    @relation("PostReports", fields: [postId], references: [id])
+
+  commentId   String?
+  comment     Comment? @relation("CommentReports", fields: [commentId], references: [id])
+
+  reason      String
+  handled     Boolean  @default(false)
+
+  handledById String?
+  handledBy   User?    @relation("ReportHandler", fields: [handledById], references: [id])
+
+  createdAt   DateTime @default(now())
+
+  @@index([postId])
+  @@index([commentId])
+  @@index([handled])
+}
+
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model PostLike {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([userId])
+  @@index([postId])
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  
+  hasUnread      Boolean      @default(false)
+
+  @@unique([userId, conversationId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  content        String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt @default(now())
+  
+  senderId       String
+  sender         User         @relation("MessageSender", fields: [senderId], references: [id])
+  
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  
+  read           Boolean      @default(false)
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // e.g. "CREATE_POST", "LOGIN", "DELETE_USER"
+  details   String?  // JSON string or text details
+  
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  
+  ipAddress String?
+  userAgent String?
+  
+  createdAt DateTime @default(now())
+  
+  @@index([action])
+  @@index([userId])
+}
+
+
