@@ -5,9 +5,10 @@ import { notFound, redirect } from "next/navigation";
 import { CommentForm } from "./comment-form";
 import BoardActions from "./BoardActions";
 import Link from "next/link";
-import { ArrowLeft, Clock, User as UserIcon } from "lucide-react";
+import { ArrowLeft, Clock, User as UserIcon, MessageCircle } from "lucide-react";
 import type { SessionUser } from "@/lib/types";
 import { userHasPermission } from "@/lib/authz";
+import { FadeIn, ScaleIn, StaggerContainer } from "@/components/MotionWrappers";
 
 type PostDetailPageProps = {
   params: Promise<{ postId: string }>;
@@ -60,80 +61,129 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
   const isClassPost = post.classId === user.classId && !!post.classId;
   const canDelete = isOwner || hasAdminPower || (isClassRep && isClassPost);
   
-  // Pass permissions to client component
   return (
-    <div className="max-w-3xl mx-auto py-6">
-      <Link href="/board" className="inline-flex items-center text-gray-500 hover:text-gray-900 mb-6">
-         <ArrowLeft size={16} className="mr-1" /> Torna alla bacheca
-      </Link>
+    <div className="relative min-h-screen pb-20 bg-stone-50">
+      {/* Background decoration */}
+      <div className="fixed top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-0">
+          <div className="absolute top-0 right-[-100px] w-[600px] h-[600px] bg-gradient-to-b from-green-100 to-transparent opacity-50 blur-[100px] rounded-full"></div>
+      </div>
 
-      <article className="bg-white rounded-xl shadow-sm border overflow-hidden mb-8">
-         <div className="p-6">
-             <div className="flex justify-between items-start mb-4">
-                 <h1 className="text-2xl font-bold text-gray-900">{post.title}</h1>
-                 <div className="flex items-center gap-2">
-                     {post.category && (
-                         <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
-                             {post.category.name}
-                         </span>
-                     )}
-                     <BoardActions 
-                        postId={post.id} 
-                        isOwner={isOwner} 
-                        hasAdminPower={hasAdminPower}
-                        canDelete={canDelete} 
-                     />
-                 </div>
+      <div className="relative z-10 max-w-4xl mx-auto py-6 px-4">
+        <div className="mb-6">
+             <Link href="/board" className="inline-flex items-center text-gray-500 hover:text-gray-900 transition-colors bg-white px-3 py-1.5 rounded-full shadow-sm hover:shadow border">
+                <ArrowLeft size={16} className="mr-1" /> Torna alla bacheca
+            </Link>
+        </div>
+
+        <ScaleIn>
+            <article className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden mb-8 ring-1 ring-black/5">
+                <div className="p-6 md:p-8">
+                    <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
+                        <div>
+                             <div className="flex items-center gap-2 mb-3">
+                                {post.category && (
+                                    <span className="bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wide border border-blue-100">
+                                        {post.category.name}
+                                    </span>
+                                )}
+                                {post.classId && (
+                                    <span className="bg-amber-50 text-amber-700 text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wide border border-amber-100">
+                                        Solo Classe
+                                    </span>
+                                )}
+                            </div>
+                            <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight">{post.title}</h1>
+                        </div>
+                        <div className="flex-shrink-0">
+                            <BoardActions 
+                                postId={post.id} 
+                                isOwner={isOwner} 
+                                hasAdminPower={hasAdminPower}
+                                canDelete={canDelete} 
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 text-sm text-gray-500 mb-8 border-b border-gray-100 pb-6">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs">
+                                {post.author.name[0]}
+                            </div>
+                            <span className="font-medium text-gray-900">{post.author.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-gray-400">
+                            <Clock size={16} />
+                            <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+
+                    <div className="prose prose-lg max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">
+                        {post.content}
+                    </div>
+                </div>
+            </article>
+        </ScaleIn>
+        
+        <div className="max-w-3xl mx-auto">
+             <div className="flex items-center gap-2 mb-6 ml-2">
+                 <MessageCircle className="text-gray-400" />
+                 <h3 className="text-xl font-bold text-gray-800">
+                    Discussione <span className="text-gray-400 font-normal ml-1">{post.comments.length}</span>
+                 </h3>
              </div>
 
-             <div className="flex items-center gap-4 text-sm text-gray-500 mb-6 border-b pb-4">
-                 <div className="flex items-center gap-1">
-                     <UserIcon size={16} />
-                     <span>{post.author.name}</span>
-                 </div>
-                 <div className="flex items-center gap-1">
-                     <Clock size={16} />
-                     <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                 </div>
-                 {post.classId && (
-                     <span className="text-amber-600 font-medium">Solo Classe</span>
+             <div className="space-y-6 mb-8 relative">
+                 {/* Thread line */}
+                 {post.comments.length > 0 && (
+                     <div className="absolute left-6 top-4 bottom-4 w-0.5 bg-gray-200 z-0 hidden md:block" />
                  )}
-             </div>
 
-             <div className="prose max-w-none text-gray-800 whitespace-pre-wrap">
-                 {post.content}
-             </div>
-         </div>
-         
-         <div className="bg-gray-50 p-6 border-t">
-             <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                 Commenti <span className="text-gray-500 font-normal">({post.comments.length})</span>
-             </h3>
-
-             <div className="space-y-4">
-                 {post.comments.length === 0 ? (
-                     <p className="text-gray-500 text-sm italic">Nessun commento finora.</p>
-                 ) : (
-                     post.comments.map(comment => (
-                         <div key={comment.id} className="flex gap-3">
-                             <div className="flex-shrink-0 w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-xs text-gray-600 font-bold">
-                                 {comment.author.name[0]}
-                             </div>
-                             <div className="flex-1 bg-white p-3 rounded-tr-xl rounded-br-xl rounded-bl-xl shadow-sm text-sm border">
-                                 <div className="flex justify-between items-baseline mb-1">
-                                     <span className="font-bold text-gray-900">{comment.author.name}</span>
-                                     <span className="text-xs text-gray-400">{new Date(comment.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                 <StaggerContainer className="space-y-6">
+                     {post.comments.length === 0 ? (
+                         <FadeIn>
+                            <div className="text-center py-10 bg-white/50 rounded-2xl border border-dashed text-gray-400 italic">
+                                Sii il primo a commentare!
+                            </div>
+                         </FadeIn>
+                     ) : (
+                         post.comments.map(comment => {
+                             const isMe = comment.authorId === user.id;
+                             return (
+                                <div key={comment.id} className={`relative z-10 flex gap-4 ${isMe ? 'flex-row-reverse' : ''}`}>
+                                     {/* Avatar */}
+                                     <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ring-2 ring-white
+                                         ${isMe ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 border'}`}>
+                                         {comment.author.name[0]}
+                                     </div>
+                                     
+                                     {/* Bubble */}
+                                     <div className={`flex-1 max-w-[85%] ${isMe ? 'text-right' : ''}`}>
+                                         <div className="flex items-baseline gap-2 mb-1 px-1 justify-end" style={{ flexDirection: isMe ? 'row' : 'row-reverse' }}>
+                                             <span className="text-xs text-gray-400">{new Date(comment.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                             <span className="font-bold text-sm text-gray-900">{comment.author.name}</span>
+                                         </div>
+                                         <div className={`inline-block p-4 rounded-2xl shadow-sm text-sm leading-relaxed text-left
+                                             ${isMe 
+                                                 ? 'bg-indigo-600 text-white rounded-tr-none' 
+                                                 : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
+                                             }`}>
+                                             {comment.content}
+                                         </div>
+                                     </div>
                                  </div>
-                                 <p className="text-gray-700">{comment.content}</p>
-                             </div>
-                         </div>
-                     ))
-                 )}
+                             );
+                         })
+                     )}
+                 </StaggerContainer>
              </div>
 
-             {canComment && <CommentForm postId={post.id} />}
+             {canComment && (
+                 <div className="bg-white p-4 rounded-2xl shadow-lg border border-gray-100 sticky bottom-4 z-20">
+                    <CommentForm postId={post.id} />
+                 </div>
+             )}
          </div>
-      </article>
+      </div>
     </div>
   );
 }

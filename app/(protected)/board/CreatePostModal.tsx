@@ -8,9 +8,15 @@ import { CreatePostForm } from "./new/create-post-form";
 interface Props {
     categories: { id: string, name: string }[];
     user: { classId?: string | null };
+    permissions: {
+        canCreatePost: boolean;
+        canCreateAnnouncement: boolean;
+        canCreateEvent: boolean;
+        canCreatePoll: boolean;
+    };
 }
 
-export default function CreatePostModal({ categories, user }: Props) {
+export default function CreatePostModal({ categories, user, permissions }: Props) {
     const [isOpen, setIsOpen] = useState(false);
 
     return (
@@ -32,6 +38,7 @@ export default function CreatePostModal({ categories, user }: Props) {
                     <CreatePostForm 
                         categories={categories}
                         user={user}
+                        permissions={permissions}
                         onSuccess={() => setIsOpen(false)}
                     />
                 </div>

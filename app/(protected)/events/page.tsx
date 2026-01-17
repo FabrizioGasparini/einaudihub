@@ -3,10 +3,11 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from 'next/link';
-import { Plus, MapPin, Calendar as CalendarIcon, Users } from "lucide-react";
+import { Plus, MapPin, Calendar as CalendarIcon, Users, Sparkles } from "lucide-react";
 import { userHasPermission } from "@/lib/authz";
 import type { SessionUser } from "@/lib/types";
 import EventCard from "./EventCard";
+import { FadeIn, ScaleIn, SlideIn, StaggerContainer } from "@/components/MotionWrappers";
 
 async function getEvents(user: SessionUser) {
     const classId = user.classId;
@@ -26,8 +27,6 @@ async function getEvents(user: SessionUser) {
     });
 }
 
-
-
 export default async function EventsPage() {
     const session = await getServerSession(authOptions);
     if (!session?.user) redirect("/login");
@@ -37,33 +36,74 @@ export default async function EventsPage() {
     const canCreate = userHasPermission(user, "CREATE_SCHOOL_EVENT") || userHasPermission(user, "CREATE_CLASS_ANNOUNCEMENT");
     
     return (
-        <div className="max-w-4xl mx-auto pb-20">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-8 px-4 md:px-0">
-                <div>
-                   <h1 className="text-3xl font-bold text-gray-900">Eventi</h1>
-                   <p className="text-gray-600">Non perderti nulla di ciò che accade.</p>
-                </div>
-                {canCreate && (
-                    <Link href="/events/new" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold shadow transition-colors flex items-center gap-2">
-                        <Plus size={20} />
-                        <span className="hidden md:inline">Crea Evento</span>
-                    </Link>
-                )}
+        <div className="relative min-h-[calc(100vh-4rem)] w-full overflow-hidden p-6 pb-24">
+            {/* Animated Background */}
+            <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
+                <div className="absolute top-[10%] left-[20%] w-96 h-96 bg-purple-300/20 rounded-full blur-[100px] animate-blob mix-blend-multiply filter"></div>
+                <div className="absolute top-[40%] right-[10%] w-96 h-96 bg-pink-300/20 rounded-full blur-[100px] animate-blob animation-delay-2000 mix-blend-multiply filter"></div>
+                <div className="absolute bottom-[10%] left-[30%] w-96 h-96 bg-indigo-300/20 rounded-full blur-[100px] animate-blob animation-delay-4000 mix-blend-multiply filter"></div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-4 md:px-0">
-                {events.length === 0 ? (
-                    <div className="col-span-full text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
-                        <CalendarIcon size={48} className="mx-auto text-gray-300 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900">Nessun evento in programma</h3>
-                        <p className="text-gray-500">Goditi il tempo libero!</p>
+            <div className="max-w-5xl mx-auto space-y-8">
+                {/* Header Section */}
+                <ScaleIn>
+                    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-800 to-indigo-900 shadow-2xl p-8 mb-8 text-white">
+                        <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12">
+                            <CalendarIcon size={180} />
+                        </div>
+                        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                            <div>
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="p-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
+                                        <CalendarIcon className="text-indigo-300" size={20} />
+                                    </div>
+                                    <span className="text-indigo-200 font-mono tracking-widest uppercase text-xs">Calendario</span>
+                                </div>
+                                <h1 className="text-4xl font-black tracking-tight mb-2 text-white">
+                                    Eventi & Attività
+                                </h1>
+                                <p className="text-indigo-200 text-lg max-w-xl font-light">
+                                    Scopri cosa succede a scuola. Non perderti i prossimi appuntamenti importanti.
+                                </p>
+                            </div>
+                            
+                            {canCreate && (
+                                <Link 
+                                    href="/board/new?type=EVENT" 
+                                    className="group relative px-6 py-3 bg-white text-indigo-900 rounded-xl font-bold hover:shadow-lg hover:bg-indigo-50 transition-all flex items-center gap-3 hover:-translate-y-0.5 active:translate-y-0"
+                                >
+                                    <Plus className="group-hover:rotate-90 transition-transform duration-300" size={20} />
+                                    <span>Nuovo Evento</span>
+                                </Link>
+                            )}
+                        </div>
                     </div>
-                ) : (
-                    events.map(event => (
-                        <EventCard key={event.id} event={event} />
-                    ))
-                )}
+                </ScaleIn>
+
+                {/* Events Grid */}
+                <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {events.length === 0 ? (
+                         <div className="col-span-full">
+                            <FadeIn>
+                                <div className="text-center py-20 bg-white/60 backdrop-blur-md rounded-3xl border border-dashed border-gray-300/50 shadow-sm">
+                                    <div className="bg-indigo-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 text-indigo-400">
+                                        <CalendarIcon size={40} />
+                                    </div>
+                                    <h3 className="text-2xl font-bold text-gray-800 mb-2">Nessun evento in programma</h3>
+                                    <p className="text-gray-500 max-w-md mx-auto">
+                                        Sembra che non ci siano attività pianificate per i prossimi giorni. Goditi un po' di relax o proponi qualcosa tu!
+                                    </p>
+                                </div>
+                            </FadeIn>
+                        </div>
+                    ) : (
+                        events.map(event => (
+                            <div key={event.id} className="h-full">
+                                <EventCard event={event} />
+                            </div>
+                        ))
+                    )}
+                </StaggerContainer>
             </div>
         </div>
     );

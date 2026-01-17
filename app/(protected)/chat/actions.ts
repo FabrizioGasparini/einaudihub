@@ -17,7 +17,8 @@ export async function getConversations() {
         where: {
             participants: {
                 some: { userId: user.id }
-            }
+            },
+            messages: { some: {} } // Only with at least one message
         },
         include: {
             participants: {
@@ -32,6 +33,115 @@ export async function getConversations() {
     });
 }
 
+export async function searchUsersToChat(query: string) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return [];
+    const user = session.user as SessionUser;
+
+    if (!query || query.length < 2) return [];
+
+    return await prisma.user.findMany({
+        where: {
+            OR: [
+                { name: { contains: query } },
+                { email: { contains: query } }
+            ],
+            // Exclude self and ensure it's a student (or rep, which implies student usually)
+            AND: [
+                { NOT: { id: user.id } },
+                { roles: { some: { role: 'STUDENT' } } }
+            ]
+        },
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            avatarUrl: true,
+            roles: { select: { role: true } },
+            class: { select: { year: true, section: true } }
+        },
+        take: 5
+    });
+}
+
+export async function startNewChat(targetUserId: string) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return { error: "Unauthorized" };
+    const user = session.user as SessionUser;
+
+    // Check if conversation already exists
+    const existing = await prisma.conversation.findFirst({
+        where: {
+            AND: [
+                { participants: { some: { userId: user.id } } },
+                { participants: { some: { userId: targetUserId } } }
+            ],
+            // Ensure strictly 2 participants for direct chat (if we had group chats this would be more complex)
+            // For now assuming 1-on-1 chats are unique pairs
+        },
+        include: {
+            participants: true
+        }
+    });
+
+    if (existing) {
+        // If > 2 participants, it might be a group chat, but let's assume direct chat reuse
+        return { conversationId: existing.id };
+    }
+
+    // Create new
+    const conversation = await prisma.conversation.create({
+        data: {
+            participants: {
+                create: [
+                    { userId: user.id },
+                    { userId: targetUserId }
+                ]
+            }
+        }
+    });
+
+    await logAction("START_CHAT", { conversationId: conversation.id, targetUserId }, user.id);
+    revalidatePath("/chat");
+    return { conversationId: conversation.id };
+}
+
+export async function getReps() {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return [];
+    const user = session.user as SessionUser;
+
+    const whereConditions: any[] = [
+        { roles: { some: { role: 'SCHOOL_REP' } } }
+    ];
+
+    if (user.classId) {
+        whereConditions.push({
+            AND: [
+                { classId: user.classId },
+                { roles: { some: { role: 'CLASS_REP' } } }
+            ]
+        });
+    }
+
+    return await prisma.user.findMany({
+        where: {
+            OR: whereConditions,
+            NOT: { id: user.id }
+        },
+        select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+            roles: { select: { role: true } },
+            class: { select: { year: true, section: true } }
+        },
+        orderBy: { name: 'asc' }
+    });
+}
+
+
+
 export async function getConversation(conversationId: string) {
     const session = await getServerSession(authOptions);
     if (!session?.user) return null;
@@ -40,7 +150,16 @@ export async function getConversation(conversationId: string) {
     const conversation = await prisma.conversation.findUnique({
         where: { id: conversationId },
         include: {
-            participants: { include: { user: true } },
+            participants: {
+                include: {
+                    user: {
+                        include: {
+                            roles: true,
+                            class: true
+                        }
+                    }
+                }
+            },
             messages: {
                 orderBy: { createdAt: 'asc' },
                 include: { sender: true }
@@ -208,4 +327,23 @@ export async function getSchoolReps() {
             avatarUrl: true
         }
     });
+}
+
+export async function deleteConversation(conversationId: string) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) return { error: "Unauthorized" };
+    const user = session.user as SessionUser;
+
+    try {
+        await prisma.conversationParticipant.deleteMany({
+            where: {
+                conversationId: conversationId,
+                userId: user.id
+            }
+        });
+        revalidatePath("/chat");
+        return { success: true };
+    } catch (error) {
+        return { error: "Failed to delete" };
+    }
 }

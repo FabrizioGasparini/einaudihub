@@ -81,6 +81,7 @@ export async function createEvent(prevState: any, formData: FormData) {
   }
 
   const { title, description, date, location, scope } = validated.data;
+  let classId: string | null = null;
 
   // Permissions Check
   if (scope === "GLOBAL") {
@@ -92,8 +93,16 @@ export async function createEvent(prevState: any, formData: FormData) {
     if (!userHasPermission(user, "CREATE_CLASS_ANNOUNCEMENT")) { 
          return { error: "Non hai i permessi per creare eventi di classe." };
     }
-    if (!user.classId) {
-        return { error: "Non sei associato a nessuna classe." };
+    
+    const targetClassId = formData.get("targetClassId") as string | null;
+    const isAdmin = user.roles.some(r => r.role === 'ADMIN');
+    if (targetClassId && isAdmin) {
+        classId = targetClassId;
+    } else {
+        if (!user.classId) {
+            return { error: "Non sei associato a nessuna classe." };
+        }
+        classId = user.classId;
     }
   }
 
@@ -104,7 +113,7 @@ export async function createEvent(prevState: any, formData: FormData) {
         description,
         date: new Date(date),
         location: location || "",
-        classId: scope === "CLASS" ? user.classId : null,
+        classId: classId,
         createdById: user.id
       }
     });

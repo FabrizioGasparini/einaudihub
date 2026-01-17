@@ -77,7 +77,7 @@ export async function deletePost(postId: string) {
     }
 }
 
-export async function reportPost(postId: string) {
+export async function reportPost(postId: string, reason?: string) {
     const session = await getServerSession(authOptions);
     if (!session?.user) return { error: "Devi effettuare il login" };
     const user = session.user as SessionUser;
@@ -100,7 +100,7 @@ export async function reportPost(postId: string) {
             data: {
                 reporterId: user.id,
                 postId: postId,
-                reason: "Contenuto inappropriato (Segnalazione rapida)",
+                reason: reason || "Contenuto inappropriato (Segnalazione rapida)",
                 handled: false
             }
         });

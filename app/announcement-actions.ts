@@ -45,10 +45,17 @@ export async function createAnnouncement(prevState: any, formData: FormData) {
      if (!userHasPermission(user, "CREATE_CLASS_ANNOUNCEMENT")) {
       return { error: "Non hai i permessi per creare avvisi per la tua classe." };
      }
-     if (!user.classId) {
-       return { error: "Non fai parte di alcuna classe." };
+     
+     const targetClassId = formData.get("targetClassId") as string | null;
+     const isAdmin = user.roles.some(r => r.role === 'ADMIN');
+     if (targetClassId && isAdmin) {
+         classId = targetClassId;
+     } else {
+         if (!user.classId) {
+             return { error: "Non fai parte di alcuna classe." };
+         }
+         classId = user.classId;
      }
-     classId = user.classId;
   } else {
     return { error: "Ambito non valido." };
   }

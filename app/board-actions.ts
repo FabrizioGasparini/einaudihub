@@ -64,10 +64,17 @@ export async function createPost(prevState: any, formData: FormData) {
 
   let classId = null;
   if (finalScope === "CLASS") {
-    if (!user.classId) {
-      return { error: "Non sei associato ad alcuna classe." };
+    const targetClassId = formData.get("targetClassId") as string | null;
+    const isAdmin = user.roles.some(r => r.role === 'ADMIN');
+
+    if (targetClassId && isAdmin) {
+        classId = targetClassId;
+    } else {
+        if (!user.classId) {
+            return { error: "Non sei associato ad alcuna classe." };
+        }
+        classId = user.classId;
     }
-    classId = user.classId;
   }
 
   try {

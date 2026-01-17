@@ -16,21 +16,23 @@ interface AnnouncementCardProps {
         };
         createdById: string;
     };
-    currentUserId: string;
-    canModeratePublic: boolean;
-    canModerateClass: boolean;
+    currentUserId?: string;
+    canModeratePublic?: boolean;
+    canModerateClass?: boolean;
+    className?: string;
 }
 
 export default function AnnouncementCard({ 
     announcement, 
     currentUserId, 
-    canModeratePublic, 
-    canModerateClass 
+    canModeratePublic = false, 
+    canModerateClass = false,
+    className
 }: AnnouncementCardProps) {
     
     // Permission check
     let canDelete = false;
-    if (announcement.createdById === currentUserId) {
+    if (currentUserId && announcement.createdById === currentUserId) {
         canDelete = true;
     } else if (announcement.isOfficial) {
         if (canModeratePublic) canDelete = true;
@@ -46,6 +48,7 @@ export default function AnnouncementCard({
             ${isOfficial 
                 ? 'bg-red-50 border-red-100' 
                 : 'bg-yellow-50 border-yellow-100'}
+            ${className || ''}
         `}>
             {/* Header / Badge */}
             <div className="flex items-start justify-between mb-3">

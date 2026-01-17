@@ -1,11 +1,13 @@
 'use client';
 
 import { votePoll, deletePoll } from "@/app/poll-actions";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { Loader2, CheckCircle2, Clock, Lock, Pencil, Trash2, Globe, School } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import UserRoleBadge from "@/components/UserRoleBadge";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import AlertModal from "@/components/ui/AlertModal";
 
 interface PollOption {
     id: string;
@@ -47,35 +49,63 @@ export default function PollCard({
 }: PollProps) {
     const [isPending, startTransition] = useTransition();
     const [optimisticVotedId, setOptimisticVotedId] = useState<string | null>(userVotedOptionId || null);
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+    const [alertInfo, setAlertInfo] = useState<{isOpen: boolean, message: string}>({ isOpen: false, message: "" });
     const router = useRouter();
 
+    useEffect(() => {
+        setOptimisticVotedId(userVotedOptionId || null);
+    }, [userVotedOptionId]);
+
     const isExpired = endsAt ? new Date() > new Date(endsAt) : false;
-    const isLocked = !!optimisticVotedId || isExpired || !canVote;
-    const showResults = isLocked || forceShowResults;
+    const hasVoted = !!optimisticVotedId;
+    const isLocked = isExpired || !canVote;
+    const showResults = hasVoted || isLocked || forceShowResults;
 
     const handleVote = (optionId: string) => {
-        if (isLocked || isPending) return;
+        if (isLocked || isPending || optionId === optimisticVotedId) return;
         
         setOptimisticVotedId(optionId); // UI Optimistic update (fake)
 
         startTransition(async () => {
             const result = await votePoll(id, optionId);
             if (result.error) {
-                alert(result.error);
-                setOptimisticVotedId(null); // Revert
+                setAlertInfo({ isOpen: true, message: result.error });
+                setOptimisticVotedId(userVotedOptionId || null); // Revert to original
             } else {
                 router.refresh();
             }
         });
     };
     
-    const handleDelete = () => {
-        if (!confirm("Sei sicuro di voler eliminare questo sondaggio?")) return;
+    const handleDelete = () => setConfirmDeleteOpen(true);
+
+    const performDelete = () => {
+        setConfirmDeleteOpen(false);
         startTransition(async () => {
              const res = await deletePoll(id);
-             if (res.error) alert(res.error);
+             if (res.error) setAlertInfo({ isOpen: true, message: res.error });
         });
     }
+
+    return (
+        <>
+        <ConfirmModal 
+            isOpen={confirmDeleteOpen}
+            onClose={() => setConfirmDeleteOpen(false)}
+            onConfirm={performDelete}
+            title="Elimina sondaggio"
+            message="Sei sicuro di voler eliminare questo sondaggio? L'azione è irreversibile."
+            isDestructive
+        />
+        <AlertModal
+            isOpen={alertInfo.isOpen}
+            onClose={() => setAlertInfo({ ...alertInfo, isOpen: false })}
+            title="Errore"
+            message={alertInfo.message}
+            type="error"
+        />
+
 
     return (
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 relative group mb-2">
@@ -189,5 +219,25 @@ export default function PollCard({
                 </div>
             </div>
         </div>
+        
+        <ConfirmModal 
+            isOpen={confirmDeleteOpen} 
+            onClose={() => setConfirmDeleteOpen(false)} 
+            onConfirm={performDelete}
+            title="Elimina Sondaggio"
+            message="Sei sicuro di voler eliminare questo sondaggio? Questa azione non può essere annullata."
+            isDestructive={true}
+            confirmText="Elimina"
+            isLoading={isPending}
+        />
+
+        <AlertModal 
+            isOpen={alertInfo.isOpen}
+            onClose={() => setAlertInfo({ ...alertInfo, isOpen: false })}
+            title="Errore"
+            message={alertInfo.message}
+            type="error"
+        />
+        </>
     );
 }

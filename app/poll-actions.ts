@@ -32,7 +32,7 @@ export async function createPoll(prevState: any, formData: FormData) {
     question: formData.get("question"),
     options: optionsArray,
     scope: formData.get("scope"),
-    endsAt: formData.get("endsAt"),
+    endsAt: formData.get("endsAt") || undefined,
   };
 
   const validated = CreatePollSchema.safeParse(rawData);
@@ -54,8 +54,16 @@ export async function createPoll(prevState: any, formData: FormData) {
      if (!userHasPermission(user, "CREATE_CLASS_POLL")) {
         return { error: "Non hai i permessi per creare sondaggi di classe." };
      }
-     if (!user.classId) return { error: "Non fai parte di una classe." };
-     classId = user.classId;
+     
+     const targetClassId = formData.get("targetClassId") as string | null;
+     const isAdmin = user.roles.some(r => r.role === 'ADMIN');
+     if (targetClassId && isAdmin) {
+         // Admin creating for another class
+         classId = targetClassId;
+     } else {
+         if (!user.classId) return { error: "Non fai parte di una classe." };
+         classId = user.classId;
+     }
   }
 
   try {
@@ -99,24 +107,21 @@ export async function votePoll(pollId: string, optionId: string) {
         return { error: "Il sondaggio è scaduto" };
     }
 
-    // 2. Check if already voted
-    const existingVote = await prisma.pollVote.findUnique({
-        where: {
-            pollId_userId: {
-                pollId: pollId,
-                userId: user.id
-            }
-        }
-    });
-
-    if (existingVote) return { error: "Hai già votato!" };
-
-    // 3. Register vote
+    // 2. Register or Update vote
     try {
-        await prisma.pollVote.create({
-            data: {
-                pollId,
-                optionId,
+        await prisma.pollVote.upsert({
+            where: {
+                pollId_userId: {
+                    pollId: pollId,
+                    userId: user.id
+                }
+            },
+            update: {
+                optionId: optionId
+            },
+            create: {
+                pollId: pollId,
+                optionId: optionId,
                 userId: user.id
             }
         });

@@ -19,9 +19,11 @@ export default function AlertModal({
     buttonText = "OK",
     type = 'info'
 }: AlertModalProps) {
-    let buttonColor = "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500";
-    if (type === 'error') buttonColor = "bg-red-600 hover:bg-red-700 focus:ring-red-500";
-    if (type === 'success') buttonColor = "bg-green-600 hover:bg-green-700 focus:ring-green-500";
+    const colors = {
+        info: "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200",
+        error: "bg-red-500 hover:bg-red-600 shadow-red-200",
+        success: "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200"
+    };
 
     return (
         <Modal 
@@ -31,14 +33,14 @@ export default function AlertModal({
             footer={
                 <button 
                     onClick={onClose}
-                    className={`w-full px-4 py-2 text-sm font-bold text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${buttonColor}`}
+                    className={`w-full px-5 py-3 text-sm font-bold text-white rounded-xl shadow-lg transition-transform active:scale-95 ${colors[type]}`}
                 >
                     {buttonText}
                 </button>
             }
         >
             <div className="py-2">
-                <p className="text-gray-600">{message}</p>
+                <p className="text-gray-600 font-medium leading-relaxed">{message}</p>
             </div>
         </Modal>
     );

@@ -5,6 +5,7 @@ import { useState } from "react"
 import { Shield, ChevronUp, ChevronDown } from "lucide-react"
 
 const TEST_USERS = [
+  { email: "gasparini.fabrizio@einaudicorreggio.it", label: "Fabrizio Gasparini", role: "Admin" },
   { email: "student@test.com", label: "Studente (1A)", role: "Student" },
   { email: "rep@test.com", label: "Rappresentante (1A)", role: "Class Rep" },
   { email: "schoolrep@test.com", label: "Rappresentante d'Istituto", role: "School Rep" },

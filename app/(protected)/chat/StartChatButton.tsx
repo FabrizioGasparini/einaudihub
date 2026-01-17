@@ -1,20 +1,33 @@
 "use client";
 
-import { startConversation } from "./actions";
+import { startNewChat } from "./actions";
 import { useRouter } from "next/navigation";
 import { User } from "lucide-react";
 
-export default function StartChatButton({ targetUser }: { targetUser: { id: string, name: string } }) {
+interface StartChatButtonProps {
+    targetUser: { id: string, name: string, avatarUrl?: string | null };
+    children?: React.ReactNode;
+    className?: string;
+    title?: string;
+}
+
+export default function StartChatButton({ targetUser, children, className, title }: StartChatButtonProps) {
     const router = useRouter();
 
     const handleClick = async () => {
-        const res = await startConversation(targetUser.id);
+        const res = await startNewChat(targetUser.id);
         if (res.conversationId) {
             router.push(`/chat/${res.conversationId}`);
-        } else if (res.error) {
-            alert(res.error);
         }
     };
+
+    if (children) {
+        return (
+            <button onClick={handleClick} className={className} title={title}>
+                {children}
+            </button>
+        );
+    }
 
     return (
         <button 

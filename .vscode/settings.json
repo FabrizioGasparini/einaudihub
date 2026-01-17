@@ -7,6 +7,10 @@
         "/^npm install zod$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "/^type app\\\\\\(protected\\)\\\\events\\\\EventCard\\.tsx$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }

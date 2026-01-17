@@ -3,11 +3,13 @@
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import AlertModal from "@/components/ui/AlertModal";
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [errorAlert, setErrorAlert] = useState<{isOpen: boolean, message: string}>({ isOpen: false, message: "" });
 
   const handleGoogleLogin = () => {
     setIsLoading(true);
@@ -28,16 +30,25 @@ export function LoginForm() {
       });
       
       if (result?.error) {
-        alert("Password errata");
+        setErrorAlert({ isOpen: true, message: "Password errata o credenziali non valide." });
         setIsLoading(false);
       }
     } catch (error) {
       console.error("Login error:", error);
+      setErrorAlert({ isOpen: true, message: "Si è verificato un errore durante il login." });
       setIsLoading(false);
     }
   };
 
   return (
+    <>
+    <AlertModal 
+        isOpen={errorAlert.isOpen}
+        onClose={() => setErrorAlert({ ...errorAlert, isOpen: false })}
+        title="Errore Login"
+        message={errorAlert.message}
+        type="error"
+    />
     <div className="w-full max-w-sm space-y-8">
       <header className="space-y-4 text-center">
         <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-4xl shadow-blue-200 shadow-xl mb-2 rotate-3 hover:rotate-0 transition-transform duration-300">
@@ -137,5 +148,6 @@ export function LoginForm() {
         Accedendo accetti i Termini di Servizio e la Privacy Policy dell'Istituto Einaudi.
       </p>
     </div>
+    </>
   );
 }

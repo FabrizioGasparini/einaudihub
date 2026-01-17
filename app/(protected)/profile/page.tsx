@@ -3,7 +3,10 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/auth-options";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import type { SessionUser } from "@/lib/types";
-import { User, Mail, School, Shield } from "lucide-react";
+import { User, Mail, School, Shield, Activity, Calendar } from "lucide-react";
+import { FadeIn, ScaleIn, StaggerContainer } from "@/components/MotionWrappers";
+import PostCard from "@/app/(protected)/board/PostCard";
+import UserRoleBadge from "@/components/UserRoleBadge";
 
 export default async function ProfilePage() {
     const session = await getServerSession(authOptions);
@@ -21,6 +24,16 @@ export default async function ProfilePage() {
                     posts: true,
                     comments: true,
                 }
+            },
+            posts: {
+                orderBy: { createdAt: 'desc' },
+                take: 5,
+                include: {
+                     author: { include: { roles: true } },
+                     category: true,
+                     likes: { where: { userId: user.id }, select: { userId: true } },
+                     _count: { select: { comments: true, likes: true } }
+                }
             }
         }
     });
@@ -28,67 +41,109 @@ export default async function ProfilePage() {
     if (!dbUser) redirect("/login");
 
     return (
-        <div className="max-w-2xl mx-auto py-10 px-4">
-            <h1 className="text-3xl font-bold text-gray-900 mb-8">Il mio Profilo</h1>
-            
-            <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 h-32 relative">
-                    <div className="absolute -bottom-10 left-8">
-                        <div className="w-24 h-24 bg-white rounded-full p-1 shadow-lg">
-                            <div className="w-full h-full bg-gray-100 rounded-full flex items-center justify-center text-gray-400">
-                                <User size={40} />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div className="pt-14 px-8 pb-8">
-                    <h2 className="text-2xl font-bold text-gray-900">{dbUser.name}</h2>
-                    <p className="text-gray-500">{dbUser.email}</p>
-                    
-                    <div className="mt-6 flex flex-wrap gap-2">
-                        {dbUser.roles.map(r => (
-                            <span key={r.id} className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border border-blue-100">
-                                {r.role}
-                            </span>
-                        ))}
-                    </div>
+        <div className="relative min-h-[calc(100vh-4rem)] w-full overflow-hidden p-6 pb-24">
+             {/* Animated Background */}
+             <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
+                <div className="absolute top-[10%] right-[30%] w-96 h-96 bg-indigo-300/20 rounded-full blur-[100px] animate-blob mix-blend-multiply filter"></div>
+                <div className="absolute bottom-[20%] left-[10%] w-96 h-96 bg-blue-300/20 rounded-full blur-[100px] animate-blob animation-delay-2000 mix-blend-multiply filter"></div>
+             </div>
 
-                    <div className="mt-8 space-y-4">
-                        <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                            <div className="bg-white p-2 rounded-lg shadow-sm text-gray-400">
-                                <Mail size={20} />
-                            </div>
-                            <div>
-                                <p className="text-xs font-bold text-gray-400 uppercase">Email</p>
-                                <p className="font-medium text-gray-900">{dbUser.email}</p>
-                            </div>
+            <div className="max-w-5xl mx-auto space-y-8">
+                {/* Header Section */}
+                <ScaleIn>
+                    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-800 to-indigo-900 shadow-2xl p-8 mb-8 text-white">
+                        <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12">
+                            <User size={180} />
                         </div>
-
-                        <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                            <div className="bg-white p-2 rounded-lg shadow-sm text-gray-400">
-                                <School size={20} />
-                            </div>
+                        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                             <div>
-                                <p className="text-xs font-bold text-gray-400 uppercase">Classe</p>
-                                <p className="font-medium text-gray-900">
-                                    {dbUser.class ? `${dbUser.class.year}${dbUser.class.section}` : "Nessuna classe assegnata"}
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="p-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
+                                        <Activity className="text-indigo-300" size={20} />
+                                    </div>
+                                    <span className="text-indigo-200 font-mono tracking-widest uppercase text-xs">Il Mio Profilo</span>
+                                </div>
+                                <h1 className="text-4xl font-black tracking-tight mb-2 text-white">
+                                    {dbUser.name}
+                                </h1>
+                                <p className="text-indigo-200 text-lg max-w-xl font-light">
+                                    {dbUser.email}
                                 </p>
-                            </div>
-                        </div>
-
-                         <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                            <div className="bg-white p-2 rounded-lg shadow-sm text-gray-400">
-                                <Shield size={20} />
-                            </div>
-                            <div>
-                                <p className="text-xs font-bold text-gray-400 uppercase">Statistiche</p>
-                                <div className="flex gap-4 mt-1">
-                                    <span className="text-sm"><b>{dbUser._count.posts}</b> Post pubblicati</span>
-                                    <span className="text-sm"><b>{dbUser._count.comments}</b> Commenti</span>
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                    {dbUser.roles.map(r => (
+                                        <UserRoleBadge key={r.role} role={r.role} />
+                                    ))}
                                 </div>
                             </div>
+                            
+                            <div className="bg-white/10 backdrop-blur-sm p-4 rounded-2xl border border-white/10 text-center min-w-[150px]">
+                                <span className="block text-3xl font-black text-white">{dbUser._count.posts}</span>
+                                <span className="text-xs text-indigo-200 uppercase tracking-widest font-semibold">Post Pubblicati</span>
+                            </div>
                         </div>
+                    </div>
+                </ScaleIn>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Sidebar Info */}
+                    <div className="lg:col-span-1 space-y-6">
+                         <div className="bg-white/80 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-gray-100">
+                            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                <Shield className="text-indigo-600" size={20} />
+                                Dettagli Account
+                            </h3>
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                                    <Mail className="text-gray-400" size={18} />
+                                    <div className="overflow-hidden">
+                                        <p className="text-xs font-bold text-gray-400 uppercase">Email</p>
+                                        <p className="text-sm font-medium text-gray-900 truncate">{dbUser.email}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                                    <School className="text-gray-400" size={18} />
+                                    <div>
+                                        <p className="text-xs font-bold text-gray-400 uppercase">Classe</p>
+                                        <p className="text-sm font-medium text-gray-900">
+                                            {dbUser.class ? `${dbUser.class.year}${dbUser.class.section}` : "Nessuna"}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                                    <Calendar className="text-gray-400" size={18} />
+                                    <div>
+                                        <p className="text-xs font-bold text-gray-400 uppercase">Attività</p>
+                                        <p className="text-sm font-medium text-gray-900">
+                                            {dbUser._count.comments} Commenti
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                         </div>
+                    </div>
+
+                    {/* Activity Feed */}
+                    <div className="lg:col-span-2 space-y-6">
+                        <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2 px-2">
+                             Attività Recente
+                        </h3>
+                        {dbUser.posts.length > 0 ? (
+                            <StaggerContainer className="flex flex-col gap-4">
+                                {dbUser.posts.map(post => (
+                                    <PostCard 
+                                        key={post.id} 
+                                        post={post} 
+                                        currentUserId={user.id} 
+                                    />
+                                ))}
+                            </StaggerContainer>
+                        ) : (
+                            <FadeIn>
+                                <div className="text-center py-10 bg-white/60 backdrop-blur-md rounded-2xl border border-dashed border-gray-300">
+                                    <p className="text-gray-500">Non hai ancora pubblicato nulla.</p>
+                                </div>
+                            </FadeIn>
+                        )}
                     </div>
                 </div>
             </div>

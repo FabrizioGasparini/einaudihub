@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from 'next/link';
-import { Calendar, AlertCircle, Plus, MessageCircle } from "lucide-react";
+import { Calendar, AlertCircle, Plus, MessageCircle, Sparkles, TrendingUp, Bell, ArrowRight, BarChart2, Link2, BookOpen, Utensils, GraduationCap, Globe, Users } from "lucide-react";
 import { userHasPermission } from "@/lib/authz";
 import type { SessionUser } from "@/lib/types";
 import EventCard from "../events/EventCard";
@@ -73,6 +73,37 @@ async function getUnreadConversations(user: SessionUser) {
     });
 }
 
+async function getActivePolls(user: SessionUser) {
+    const classId = user.classId;
+    
+    const whereConditions: any[] = [
+        { schoolWide: true }
+    ];
+    
+    if (classId) {
+        whereConditions.push({ classId: classId });
+    }
+    
+    return await prisma.poll.findMany({
+        where: {
+            AND: [
+                { OR: whereConditions },
+                {
+                    OR: [
+                        { endsAt: null },
+                        { endsAt: { gt: new Date() } }
+                    ]
+                }
+            ]
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+        include: { 
+             _count: { select: { votes: true } }
+        }
+    });
+}
+
 export default async function HomePage() {
   const session = await getServerSession(authOptions);
   
@@ -85,66 +116,94 @@ export default async function HomePage() {
   const announcements = await getAnnouncements(user);
   const events = await getUpcomingEvents(user);
   const unreadChats = await getUnreadConversations(user);
+  const activePolls = await getActivePolls(user);
 
   const canCreateEvent = userHasPermission(user, "CREATE_SCHOOL_EVENT") || userHasPermission(user, "CREATE_CLASS_ANNOUNCEMENT");
   const canModeratePublic = userHasPermission(user, "MODERATE_PUBLIC_BOARD");
   const canModerateClass = userHasPermission(user, "MODERATE_CLASS_CONTENT");
   
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <FadeIn>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Bentornato, {user.name.split(" ")[0]}!</h1>
-          <p className="text-gray-600 mt-1">
-             Ecco cosa succede oggi all'Einaudi.
-             {user.classId ? <span> (Classe supportata)</span> : <span className="text-amber-600"> (Nessuna classe associata)</span>}
-          </p>
+    <div className="relative min-h-screen">
+       {/* Background Decoration (Animated Blobs) */}
+       <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
+            <div className="absolute top-[5%] right-[5%] w-[400px] h-[400px] bg-blue-400/10 rounded-full blur-[80px] mix-blend-multiply animate-pulse" style={{ animationDuration: '8s' }}></div>
+            <div className="absolute top-[20%] left-[10%] w-[300px] h-[300px] bg-purple-400/10 rounded-full blur-[80px] mix-blend-multiply animate-pulse" style={{ animationDuration: '10s' }}></div>
+            <div className="absolute bottom-[10%] right-[20%] w-[500px] h-[500px] bg-indigo-400/10 rounded-full blur-[100px] mix-blend-multiply animate-pulse" style={{ animationDuration: '12s' }}></div>
+       </div>
+
+      <div className="space-y-10 pb-20">
+      {/* Hero Section */}
+      <ScaleIn>
+        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden text-white mb-6 group">
+            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-1000"></div>
+            <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 bg-white opacity-10 rounded-full blur-2xl group-hover:scale-110 transition-transform duration-1000"></div>
+            
+            <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+                <div>
+                    <div className="flex items-center gap-2 text-blue-100 font-bold mb-2 uppercase tracking-wider text-xs">
+                        <Sparkles size={14} className="text-yellow-300" /> EinaudiHub Dashboard
+                    </div>
+                    <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tight leading-tight">
+                        Ciao, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-100 to-white">{user.name.split(" ")[0]}</span>!
+                    </h1>
+                    <p className="text-blue-100 text-lg max-w-lg leading-relaxed opacity-90">
+                        {user.classId 
+                            ? `Tutto pronto per la tua giornata scolastica. Ecco gli ultimi aggiornamenti della tua classe e dell'istituto.`
+                            : `Benvenuto su EinaudiHub. Esplora gli eventi e rimani aggiornato.`
+                        }
+                    </p>
+                </div>
+
+                {canCreateEvent && (
+                    <Link href="/board/new?type=EVENT" className="bg-white text-blue-600 px-6 py-3 rounded-2xl font-bold hover:bg-blue-50 hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2">
+                        <Plus size={20} />
+                        Crea Nuovo Evento
+                    </Link>
+                )}
+            </div>
         </div>
-        
-        {canCreateEvent && (
-           <div className="flex gap-2">
-             <Link href="/events/new" className="bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center gap-2">
-                <Plus size={18} />
-                <span>Crea Contenuto</span>
-             </Link>
-           </div>
-        )}
-      </div>
-      </FadeIn>
+      </ScaleIn>
 
         {/* Incoming Messages Section */}
         {unreadChats.length > 0 && (
-            <ScaleIn delay={0.2}>
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-3">
-                    <MessageCircle className="text-blue-600" size={20} />
-                    <h2 className="font-bold text-blue-900">Messaggi in arrivo</h2>
-                    <span className="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">{unreadChats.length}</span>
+            <SlideIn direction="bottom" delay={0.2}>
+            <div className="bg-white/60 backdrop-blur-md border border-blue-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all">
+                <div className="flex items-center justify-between mb-4">
+                     <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 text-blue-600 rounded-xl">
+                            <MessageCircle size={24} />
+                        </div>
+                        <div>
+                            <h2 className="font-bold text-gray-900 text-lg">Messaggi recenti</h2>
+                            <p className="text-xs text-gray-500 font-medium">Hai {unreadChats.length} conversazioni non lette</p>
+                        </div>
+                    </div>
+                    <Link href="/chat" className="text-blue-600 text-sm font-bold hover:underline">Vedi tutti</Link>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {unreadChats.map(chat => {
                          const other = chat.participants.find(p => p.userId !== user.id)?.user;
                          const lastMsg = chat.messages[0];
                          return (
-                             <Link key={chat.id} href={`/chat/${chat.id}`} className="block bg-white p-3 rounded-lg shadow-sm border border-blue-100 hover:shadow-md transition-all group">
-                                 <div className="flex items-center gap-3">
-                                     <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-700">
-                                         {other?.name?.[0]}
-                                     </div>
-                                     <div className="min-w-0">
-                                         <p className="font-bold text-gray-900 text-sm truncate group-hover:text-blue-600">{other?.name}</p>
-                                         <p className="text-xs text-gray-500 truncate">{lastMsg?.content}</p>
-                                     </div>
-                                     <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>
+                             <Link key={chat.id} href={`/chat/${chat.id}`} className="flex items-center gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:border-blue-300 hover:shadow-md transition-all group">
+                                 <div className="relative">
+                                    <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-100 to-indigo-100 flex items-center justify-center font-bold text-indigo-600 text-lg shadow-inner group-hover:scale-105 transition-transform">
+                                        {other?.name?.[0]}
+                                    </div>
+                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
                                  </div>
+                                 <div className="min-w-0 flex-1">
+                                     <p className="font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">{other?.name}</p>
+                                     <p className="text-sm text-gray-500 truncate">{lastMsg?.content || "Nuovo messaggio"}</p>
+                                 </div>
+                                 <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                              </Link>
                          );
                     })}
                 </div>
             </div>
-            </ScaleIn>
+            </SlideIn>
         )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -152,29 +211,80 @@ export default async function HomePage() {
         {/* Main Feed: Announcements */}
         <div className="lg:col-span-2 space-y-6">
           <FadeIn delay={0.3}>
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-900">Avvisi Recenti</h2>
-            <Link href="/announcements" className="text-sm text-blue-600 hover:underline">Vedi tutti</Link>
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-2 py-2">
+                 <div className="p-2 bg-orange-100 text-orange-600 rounded-lg">
+                    <Bell size={20} />
+                 </div>
+                 <h2 className="text-xl font-bold text-gray-900">Avvisi in evidenza</h2>
+            </div>
+            <Link href="/announcements" className="text-sm font-bold text-gray-500 hover:text-blue-600 flex items-center gap-1 transition-colors">
+                Vedi tutti <ArrowRight size={16} />
+            </Link>
           </div>
 
-          <div className="space-y-4">
+          <StaggerContainer delay={0.4} className="space-y-4">
             {announcements.length === 0 ? (
-                <div className="bg-white p-6 rounded-3xl border border-dashed text-center text-gray-400">
-                    Nessun avviso recente.
+                <div className="bg-white/50 p-10 rounded-3xl border-2 border-dashed border-gray-200 text-center text-gray-400 flex flex-col items-center gap-2">
+                    <Bell size={40} className="text-gray-200" />
+                    <p>Nessun avviso recente da visualizzare.</p>
                 </div>
             ) : (
                 announcements.map((ann) => (
-                    <AnnouncementCard 
-                        key={ann.id} 
-                        announcement={ann}
-                        currentUserId={user.id}
-                        canModeratePublic={canModeratePublic}
-                        canModerateClass={canModerateClass}
-                    />
+                    <div key={ann.id} className="transform transition-all duration-300 hover:scale-[1.01]">
+                        <AnnouncementCard 
+                            announcement={ann}
+                            currentUserId={user.id}
+                            canModeratePublic={canModeratePublic}
+                            canModerateClass={canModerateClass}
+                        />
+                    </div>
                 ))
             )}
-          </div>
+          </StaggerContainer>
           </FadeIn>
+          
+          {/* Active Polls Widget */}
+          <SlideIn direction="right" delay={0.5}>
+            <div className="space-y-4">
+                <div className="flex items-center justify-between px-2">
+                    <div className="flex items-center gap-2">
+                        <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                            <BarChart2 size={20} />
+                        </div>
+                        <h2 className="text-xl font-bold text-gray-900">Sondaggi Attivi</h2>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-100 overflow-hidden">
+                    {activePolls.length === 0 ? (
+                         <div className="p-6 text-center text-gray-400">
+                             Nessun sondaggio attivo al momento.
+                         </div>
+                    ) : (
+                        activePolls.map(poll => (
+                            <Link href="/polls" key={poll.id} className="block p-4 hover:bg-gray-50 transition-colors">
+                                <h3 className="font-bold text-gray-800 text-sm line-clamp-1 mb-1">{poll.question}</h3>
+                                <div className="flex items-center justify-between text-xs text-gray-500">
+                                    <span>{poll.schoolWide ? 'Istituto' : 'Classe'}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`px-2 py-0.5 rounded-full font-bold ${poll.endsAt ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
+                                            {poll.endsAt ? `Scade il ${poll.endsAt.toLocaleDateString()}` : 'Senza scadenza'}
+                                        </span>
+                                        <span className="bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold">
+                                            {poll._count.votes} voti
+                                        </span>
+                                    </div>
+                                </div>
+                            </Link>
+                        ))
+                    )}
+                    <Link href="/polls" className="block text-center p-3 text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors uppercase tracking-wider">
+                        Vai ai sondaggi
+                    </Link>
+                </div>
+            </div>
+          </SlideIn>
         </div>
 
         {/* Sidebar: Events & Quick Info */}
@@ -182,47 +292,84 @@ export default async function HomePage() {
           
           {/* Events */}
           <SlideIn direction="right" delay={0.4}>
-          <div>
-            <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900">Prossimi Eventi</h2>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-2">
+                <div className="flex items-center gap-2">
+                    <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+                        <Calendar size={20} />
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-900">Prossimi Eventi</h2>
+                </div>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-3">
                {events.length === 0 ? (
-                   <div className="bg-white p-6 rounded-3xl border border-dashed text-center text-gray-400">
+                   <div className="bg-white/50 p-8 rounded-3xl border-2 border-dashed border-gray-200 text-center text-gray-400">
                         Nessun evento in programma.
                    </div>
                ) : (
                    events.map(ev => (
-                       <EventCard key={ev.id} event={ev} />
+                       <div key={ev.id} className="transform transition-all hover:-translate-x-1">
+                           <EventCard event={ev} />
+                       </div>
                    ))
                )}
             </div>
             
-             <Link href="/events" className="mt-4 block text-center text-sm text-blue-600 font-bold hover:underline">
+             <Link href="/events" className="block text-center p-3 rounded-xl bg-gray-50 text-gray-600 text-sm font-bold hover:bg-gray-100 hover:text-gray-900 transition-colors">
                 Vedi tutti gli eventi
             </Link>
           </div>
           </SlideIn>
 
-          {/* User Status / Quick Poll */}
-          <ScaleIn delay={0.5}>
-          <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-6 rounded-3xl text-white shadow-lg relative overflow-hidden">
-             
-             {/* Decor */}
-             <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white opacity-20 rounded-full blur-xl"></div>
+          {/* Quick Actions Grid */}
+          <ScaleIn delay={0.6}>
+              <div className="space-y-4">
+                 <div className="flex items-center gap-2 px-2">
+                    <div className="p-2 bg-purple-100 text-purple-600 rounded-lg">
+                        <Sparkles size={20} />
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-900">Accesso Rapido</h2>
+                 </div>
+                 
+                 <div className="grid grid-cols-2 gap-4">
+                      {/* My Class Board */}
+                      <Link href="/board" className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center gap-2 hover:shadow-md hover:border-indigo-200 hover:-translate-y-1 transition-all group text-center cursor-pointer">
+                         <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
+                             <Users size={24} />
+                         </div>
+                         <span className="text-sm font-bold text-gray-700 group-hover:text-indigo-600">La mia Classe</span>
+                      </Link>
 
-             <h3 className="font-bold text-lg mb-2 relative z-10">La tua opinione conta</h3>
-             <p className="text-sm text-purple-100 mb-6 relative z-10 opacity-90 leading-relaxed">
-                 Partecipa ai sondaggi attivi per migliorare la scuola.
-             </p>
-             <Link href="/polls" className="relative z-10 w-full block text-center bg-white text-purple-600 py-3 rounded-xl hover:bg-purple-50 transition-colors text-sm font-bold shadow-sm">
-                 Vai ai Sondaggi
-             </Link>
-          </div>
+                       {/* Create Content */}
+                       <Link href="/board/new" className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center gap-2 hover:shadow-md hover:border-green-200 hover:-translate-y-1 transition-all group text-center cursor-pointer">
+                         <div className="w-12 h-12 rounded-full bg-green-50 text-green-600 flex items-center justify-center group-hover:bg-green-600 group-hover:text-white transition-all duration-300">
+                             <Plus size={24} />
+                         </div>
+                         <span className="text-sm font-bold text-gray-700 group-hover:text-green-600">Crea Post</span>
+                      </Link>
+                       
+                       {/* All Polls */}
+                       <Link href="/polls" className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center gap-2 hover:shadow-md hover:border-blue-200 hover:-translate-y-1 transition-all group text-center cursor-pointer">
+                         <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
+                             <BarChart2 size={24} />
+                         </div>
+                         <span className="text-sm font-bold text-gray-700 group-hover:text-blue-600">Sondaggi</span>
+                      </Link>
+
+                       {/* School Board */}
+                       <Link href="/announcements" className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center gap-2 hover:shadow-md hover:border-orange-200 hover:-translate-y-1 transition-all group text-center cursor-pointer">
+                         <div className="w-12 h-12 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center group-hover:bg-orange-600 group-hover:text-white transition-all duration-300">
+                             <Bell size={24} />
+                         </div>
+                         <span className="text-sm font-bold text-gray-700 group-hover:text-orange-600">Avvisi</span>
+                      </Link>
+                 </div>
+              </div>
           </ScaleIn>
 
         </div>
+      </div>
       </div>
     </div>
   );

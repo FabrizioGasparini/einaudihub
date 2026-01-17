@@ -29,9 +29,11 @@ import { motion, AnimatePresence } from "framer-motion";
 
 interface SidebarProps {
     user: SessionUser;
+    mobileOpen?: boolean;
+    setMobileOpen?: (open: boolean) => void;
 }
 
-export default function Sidebar({ user }: SidebarProps) {
+export default function Sidebar({ user, mobileOpen = false, setMobileOpen }: SidebarProps) {
     const pathname = usePathname();
     const [collapsed, setCollapsed] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
@@ -108,11 +110,29 @@ export default function Sidebar({ user }: SidebarProps) {
     };
 
     return (
-        <motion.aside 
-            animate={{ width: collapsed ? 90 : 280 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="hidden md:flex flex-col h-screen sticky top-0 border-r bg-white/80 backdrop-blur-xl z-40 shadow-[10px_0_30px_-10px_rgba(0,0,0,0.03)]"
-        >
+        <>
+            <AnimatePresence>
+                {mobileOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setMobileOpen?.(false)}
+                        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden"
+                    />
+                )}
+            </AnimatePresence>
+
+            <motion.aside 
+                animate={{ width: collapsed ? 90 : 280 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className={`
+                    flex flex-col h-screen border-r bg-white/80 backdrop-blur-xl z-50 shadow-[10px_0_30px_-10px_rgba(0,0,0,0.03)]
+                    fixed inset-y-0 left-0 md:sticky md:top-0
+                    ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+                    transition-transform duration-300 md:transition-none
+                `}
+            >
             {/* Header / Brand */}
             <div className="p-6 flex items-center justify-between mb-2">
                 <AnimatePresence>
@@ -216,6 +236,7 @@ export default function Sidebar({ user }: SidebarProps) {
                     </div>
                 </div>
             </div>
-        </motion.aside>
+            </motion.aside>
+        </>
     );
 }

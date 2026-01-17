@@ -185,6 +185,7 @@ export const authOptions: NextAuthOptions = {
 
       const isAdminEmail =
         profile.email === "gasparini.fabrizio@einaudicorreggio.it" ||
+        profile.email === "essa.mohammad@einaudicorreggio.it" ||
         profile.email === "busato.riccardo@einaudicorreggio.it";
 
       let dbUser = await prisma.user.findUnique({

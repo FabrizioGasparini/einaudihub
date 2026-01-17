@@ -5,6 +5,7 @@ import { Copy, Trash2, Edit2, MoreHorizontal, X, Check } from "lucide-react";
 import { deleteMessage, editMessage } from "../actions";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 
 interface MessageBubbleProps {
     message: {
@@ -21,6 +22,7 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
     const [showMenu, setShowMenu] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(message.content);
+    const [isConfirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
     const router = useRouter();
 
     // Check edited status
@@ -31,12 +33,15 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
         setShowMenu(false);
     };
 
-    const handleDelete = async () => {
-        if (confirm("Eliminare questo messaggio?")) {
-            await deleteMessage(message.id);
-            router.refresh();
-        }
+    const handleDelete = () => {
+        setConfirmDeleteOpen(true);
         setShowMenu(false);
+    };
+
+    const performDelete = async () => {
+        await deleteMessage(message.id);
+        router.refresh();
+        setConfirmDeleteOpen(false);
     };
 
     const handleEdit = () => {
@@ -58,6 +63,15 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
     };
 
     return (
+        <>
+            <ConfirmModal
+                isOpen={isConfirmDeleteOpen}
+                onClose={() => setConfirmDeleteOpen(false)}
+                onConfirm={performDelete}
+                title="Elimina messaggio"
+                message="Sei sicuro di voler eliminare questo messaggio? L'azione è irreversibile."
+                isDestructive
+            />
         <motion.div 
             initial={{ opacity: 0, scale: 0.5, y: 20, rotateX: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0, rotateX: 0 }}
@@ -148,6 +162,7 @@ export default function MessageBubble({ message, isMe }: MessageBubbleProps) {
                 </AnimatePresence>
             </div>
         </motion.div>
+        </>
     );
 }
 

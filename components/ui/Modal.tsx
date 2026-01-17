@@ -28,30 +28,40 @@ export default function Modal({ isOpen, onClose, title, children, footer }: Moda
     if (!mounted || !isOpen) return null;
 
     return createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
             <div 
-                className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 scale-100"
+                className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300" 
+                onClick={onClose}
+            />
+
+            {/* Modal Content */}
+            <div 
+                className="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-5 duration-300 scale-100 ring-1 ring-black/5"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Header */}
-                <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50/50">
-                    <h3 className="font-bold text-lg text-gray-900">{title}</h3>
+                {/* Header - Minimalist */}
+                <div className="px-8 pt-8 pb-4 flex justify-between items-start">
+                    <div>
+                        <h3 className="text-2xl font-black text-gray-900 tracking-tight">{title}</h3>
+                        <div className="h-1.5 w-12 bg-indigo-500 rounded-full mt-3"></div>
+                    </div>
                     <button 
                         onClick={onClose}
-                        className="p-1 rounded-full hover:bg-gray-200 text-gray-500 transition-colors"
+                        className="p-2 rounded-full bg-gray-50 hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-all duration-200"
                     >
                         <X size={20} />
                     </button>
                 </div>
 
                 {/* Body */}
-                <div className="p-6">
+                <div className="px-8 py-2">
                     {children}
                 </div>
 
                 {/* Footer */}
                 {footer && (
-                    <div className="px-6 py-4 bg-gray-50 border-t flex justify-end gap-3">
+                    <div className="px-8 pb-8 pt-4 flex justify-end gap-3">
                         {footer}
                     </div>
                 )}

@@ -1,14 +1,15 @@
 import { getConversation } from "../actions";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/auth-options";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import ChatInput from "../ChatInput"; 
 import AutoRefresh from "@/components/AutoRefresh";
-import { ShieldCheck, ArrowLeft, Phone, Video, MoreVertical } from "lucide-react";
-import Link from "next/link";
+import { ShieldCheck } from "lucide-react"; // Removed other icons
 import type { SessionUser } from "@/lib/types";
 import MessageBubble from "./MessageBubble";
 import MarkRead from "./MarkRead";
+import { StaggerContainer } from "@/components/MotionWrappers";
+import ChatHeader from "./ChatHeader";
 
 export default async function ConversationPage({ params }: { params: Promise<{ conversationId: string }> }) {
     const session = await getServerSession(authOptions);
@@ -21,59 +22,45 @@ export default async function ConversationPage({ params }: { params: Promise<{ c
     const otherParticipant = conversation.participants.find((p: any) => p.userId !== currentUserId)?.user;
 
     return (
-        <div className="flex flex-col h-[calc(100vh-64px)] bg-slate-50 relative">
+        <div className="flex flex-col h-[calc(100vh-64px)] bg-stone-50 relative overflow-hidden">
+             {/* Background Decoration */}
+             <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-0">
+                <div className="absolute top-[20%] right-[-10%] w-[400px] h-[400px] bg-gradient-to-b from-blue-100 to-transparent opacity-40 blur-[80px] rounded-full animate-blob"></div>
+                <div className="absolute bottom-[20%] left-[-10%] w-[300px] h-[300px] bg-gradient-to-t from-purple-100 to-transparent opacity-40 blur-[80px] rounded-full animate-blob animation-delay-2000"></div>
+            </div>
+
             <MarkRead conversationId={conversationId} />
             <AutoRefresh intervalMs={3000} />
             
-            {/* Modern Header */}
-            <div className="bg-white/80 backdrop-blur-md border-b px-4 py-3 flex items-center justify-between shadow-sm sticky top-0 z-30">
-                <div className="flex items-center gap-3">
-                     <Link href="/chat" className="text-gray-600 hover:text-gray-900 md:hidden p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors">
-                        <ArrowLeft size={22} />
-                    </Link>
-                    <div className="relative">
-                        <div className="w-10 h-10 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-md ring-2 ring-white">
-                            {otherParticipant?.name?.[0]}
-                        </div>
-                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
-                    </div>
-                    <div>
-                        <h1 className="font-bold text-gray-900 leading-none">{otherParticipant?.name}</h1>
-                        <p className="text-xs text-gray-500 mt-0.5 font-medium">Online</p>
-                    </div>
-                </div>
-                
-                <div className="flex items-center gap-2 text-gray-400">
-                    <button className="p-2 hover:bg-gray-100 rounded-full transition-colors"><MoreVertical size={20} /></button>
-                </div>
-            </div>
+            <ChatHeader otherParticipant={otherParticipant} conversationId={conversationId} />
 
-            {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-slate-50 relative"> 
-                {/* Background Decor */}
-                <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, black 1px, transparent 0)', backgroundSize: '20px 20px' }}></div>
-                
-                {conversation.messages.length === 0 && (
+            {/* Messages Area - with StaggerContainer */}
+            <div className="flex-1 overflow-y-auto p-4 pt-24 space-y-4 relative z-10 custom-scrollbar"> 
+                {conversation.messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center p-8 opacity-60">
-                         <div className="w-20 h-20 bg-blue-100 text-blue-500 rounded-full mb-4 flex items-center justify-center">
-                            <ShieldCheck size={40} />
+                         <div className="w-24 h-24 bg-blue-50 text-blue-500 rounded-3xl mb-6 flex items-center justify-center rotate-3 border-4 border-white shadow-xl">
+                            <ShieldCheck size={48} />
                          </div>
-                         <p className="text-gray-600 font-bold text-lg">Inizia la conversazione</p>
-                         <p className="text-sm text-gray-500 max-w-xs mt-2">I messaggi sono crittografati end-to-end.</p>
+                         <p className="text-gray-900 font-bold text-xl mb-1">Inizia la conversazione</p>
+                         <p className="text-xs text-gray-500 max-w-xs bg-white/60 px-3 py-1 rounded-full border border-gray-100 shadow-sm">
+                             🔒 Crittografia End-to-End
+                         </p>
                     </div>
+                ) : (
+                    <StaggerContainer className="flex flex-col space-y-2 pb-4">
+                        {conversation.messages.map((msg: any) => (
+                            <MessageBubble 
+                                key={msg.id} 
+                                message={msg} 
+                                isMe={msg.senderId === currentUserId} 
+                            />
+                        ))}
+                    </StaggerContainer>
                 )}
-                
-                {conversation.messages.map((msg: any) => (
-                    <MessageBubble 
-                        key={msg.id} 
-                        message={msg} 
-                        isMe={msg.senderId === currentUserId} 
-                    />
-                ))}
             </div>
 
             {/* Input using Client Component - Floating & Modern */}
-            <div className="p-4 bg-gradient-to-t from-slate-50 to-transparent sticky bottom-0 z-40">
+            <div className="p-4 pt-2 bg-gradient-to-t from-stone-50 via-stone-50 to-transparent sticky bottom-0 z-40 bg-stone-50/90 backdrop-blur-sm">
                  <ChatInput conversationId={conversationId} />
             </div>
         </div>
